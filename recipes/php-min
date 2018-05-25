@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+# Build Path: /app/.heroku/php-min/
+
+OUT_PREFIX=$1
+
+# fail hard
+set -o pipefail
+# fail harder
+set -eux
+
+buildcurl zlib 1.2.8 | tar xz -C $OUT_PREFIX
+buildcurl icu 55.1 | tar xz -C $OUT_PREFIX
+
+DEFAULT_VERSION="7.0.27"
+dep_version=${VERSION:-$DEFAULT_VERSION}
+dep_dirname=php-${dep_version}
+dep_archive_name=${dep_dirname}.tar.gz
+dep_url=https://php.net/get/${dep_archive_name}/from/this/mirror
+
+echo "-----> Building minimal PHP ${dep_version}..."
+
+curl -L ${dep_url} | tar xz
+
+pushd ${dep_dirname}
+
+export PATH=${OUT_PREFIX}/bin:$PATH
+# cannot be built shared: date, ereg, opcache (always), pcre, reflection, sockets (?), spl, standard,
+# sqlite3 and pdo_sqlite are on by default but we're building them shared on purpose
+./configure \
+    --prefix=${OUT_PREFIX} \
+    --with-config-file-path=${OUT_PREFIX}/etc/php \
+    --with-config-file-scan-dir=${OUT_PREFIX}/etc/php/conf.d \
+    --enable-static \
+    --disable-phpdbg \
+    --disable-cgi \
+    --enable-cli\
+    --with-bz2 \
+    --disable-dom \
+    --disable-libxml \
+    --with-openssl \
+    --without-pear \
+    --disable-pdo \
+    --without-pdo-sqlite \
+    --with-readline \
+    --disable-session \
+    --disable-simplexml \
+    --without-sqlite3 \
+    --enable-sockets \
+    --disable-xml \
+    --disable-xmlreader \
+    --disable-xmlwriter \
+    --enable-zip \
+    --with-zlib \
+    --with-zlib-dir=${OUT_PREFIX}
+make -s -j ${JOBS:=1}
+
+mkdir -p ${OUT_PREFIX}/bin
+cp sapi/cli/php ${OUT_PREFIX}/bin/php
+popd
+
+echo "-----> Stripping..."
+strip ${OUT_PREFIX}/bin/php
+
+echo "-----> Done."

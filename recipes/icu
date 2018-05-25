@@ -28,4 +28,6 @@ make -s -j ${JOBS:=1}
 make install -s
 popd
 
+rm -rf ${OUT_PREFIX}/share/man ${OUT_PREFIX}/share/doc
+
 echo "-----> Done."

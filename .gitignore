@@ -1,2 +1,5 @@
 *.swp
 *.tgz
+
+# IDE's
+.idea/
